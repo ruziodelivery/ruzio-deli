@@ -1,3 +1,4 @@
+
 /**
  * RUZIO - Food Delivery Platform
  * Main Server Entry Point
@@ -13,7 +14,8 @@ const {
   adminRoutes,
   restaurantRoutes,
   orderRoutes,
-  deliveryRoutes
+  deliveryRoutes,
+  notificationRoutes
 } = require('./routes');
 
 // Initialize Express app
@@ -24,15 +26,9 @@ connectDB();
 
 // Middleware
 app.use(cors({
-  origin: [
-    'https://ruzio-deli.onrender.com',
-    'http://localhost:5173'
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
 }));
-
-app.options('*', cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -42,6 +38,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/restaurant', restaurantRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/delivery', deliveryRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

@@ -1,11 +1,11 @@
 /**
- * RUZIO - Customer Orders Page
+ * RUZIO - Customer Orders Page (Updated with INR)
  */
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { orderAPI } from '../../services/api';
-import { Layout, Card, Loading, ErrorMessage, OrderStatusBadge, EmptyState } from '../../components/ui';
+import { Layout, Card, Loading, ErrorMessage, OrderStatusBadge, EmptyState, formatCurrency } from '../../components/ui';
 
 export default function MyOrders() {
   const [orders, setOrders] = useState([]);
@@ -52,7 +52,7 @@ export default function MyOrders() {
                   <div className="text-right">
                     <OrderStatusBadge status={order.status} />
                     <p className="font-bold text-primary-600 mt-2">
-                      ${order.totalAmount.toFixed(2)}
+                      {formatCurrency(order.totalAmount)}
                     </p>
                   </div>
                 </div>

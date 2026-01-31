@@ -8,5 +8,6 @@ module.exports = {
   PlatformSettings: require('./PlatformSettings'),
   Restaurant: require('./Restaurant'),
   MenuItem: require('./MenuItem'),
-  Order: require('./Order')
+  Order: require('./Order'),
+  Notification: require('./Notification')
 };

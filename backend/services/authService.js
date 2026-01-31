@@ -1,12 +1,13 @@
 /**
  * RUZIO - Auth Service
- * Business logic for authentication
+ * Business logic for authentication with OTP support
  */
 
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
 const { User } = require('../models');
 const { ApiError } = require('../middleware/errorHandler');
-const { ROLES } = require('../config/constants');
+const { ROLES, FAST2SMS } = require('../config/constants');
 
 /**
  * Generate JWT token
@@ -18,15 +19,144 @@ const generateToken = (userId) => {
 };
 
 /**
- * Register a new user
+ * Generate OTP
+ */
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+/**
+ * Send OTP via Fast2SMS
+ */
+const sendOTP = async (phone, otp) => {
+  try {
+    const response = await axios.post(FAST2SMS.apiUrl, {
+      route: 'otp',
+      variables_values: otp,
+      numbers: phone
+    }, {
+      headers: {
+        'authorization': process.env.FAST2SMS_API_KEY,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    return response.data.return === true;
+  } catch (error) {
+    console.error('Fast2SMS Error:', error.response?.data || error.message);
+    // In development, we'll allow OTP to be sent anyway for testing
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[DEV] OTP for ${phone}: ${otp}`);
+      return true;
+    }
+    throw new ApiError('Failed to send OTP. Please try again.', 500);
+  }
+};
+
+/**
+ * Request OTP for login/signup
+ */
+const requestOTP = async (phone, name = null, role = ROLES.CUSTOMER) => {
+  // Validate phone number format (10 digit Indian mobile)
+  if (!/^[6-9]\d{9}$/.test(phone)) {
+    throw new ApiError('Please enter a valid 10-digit Indian mobile number', 400);
+  }
+
+  // Check if user exists
+  let user = await User.findOne({ phone });
+  
+  const otp = generateOTP();
+  const otpExpiry = new Date(Date.now() + FAST2SMS.otpExpiry * 60 * 1000);
+
+  if (user) {
+    // Existing user - just update OTP
+    user.otp = {
+      code: otp,
+      expiresAt: otpExpiry,
+      verified: false
+    };
+    await user.save();
+  } else {
+    // New user - create with pending status
+    if (!name) {
+      throw new ApiError('Name is required for new registration', 400);
+    }
+    user = await User.create({
+      name,
+      phone,
+      role,
+      otp: {
+        code: otp,
+        expiresAt: otpExpiry,
+        verified: false
+      }
+    });
+  }
+
+  // Send OTP
+  await sendOTP(phone, otp);
+
+  return {
+    message: 'OTP sent successfully',
+    isNewUser: !user.otp?.verified,
+    phone
+  };
+};
+
+/**
+ * Verify OTP and login
+ */
+const verifyOTP = async (phone, otp) => {
+  const user = await User.findOne({ phone }).select('+otp.code +otp.expiresAt');
+
+  if (!user) {
+    throw new ApiError('User not found', 404);
+  }
+
+  if (!user.otp?.code) {
+    throw new ApiError('Please request a new OTP', 400);
+  }
+
+  if (new Date() > user.otp.expiresAt) {
+    throw new ApiError('OTP has expired. Please request a new one.', 400);
+  }
+
+  if (user.otp.code !== otp) {
+    throw new ApiError('Invalid OTP', 400);
+  }
+
+  // Check if user is active
+  if (!user.isActive) {
+    throw new ApiError('Your account has been deactivated', 401);
+  }
+
+  // Mark OTP as verified and clear it
+  user.otp = {
+    code: null,
+    expiresAt: null,
+    verified: true
+  };
+  await user.save();
+
+  // Generate token
+  const token = generateToken(user._id);
+
+  return {
+    user: user.toJSON(),
+    token
+  };
+};
+
+/**
+ * Register a new user (legacy - email/password)
  */
 const register = async (userData) => {
-  const { email, role } = userData;
+  const { phone } = userData;
 
   // Check if user already exists
-  const existingUser = await User.findOne({ email });
+  const existingUser = await User.findOne({ phone });
   if (existingUser) {
-    throw new ApiError('Email already registered', 400);
+    throw new ApiError('Phone number already registered', 400);
   }
 
   // Create user
@@ -42,20 +172,22 @@ const register = async (userData) => {
 };
 
 /**
- * Login user
+ * Login user (legacy - email/password)
  */
-const login = async (email, password) => {
-  // Find user and include password
-  const user = await User.findOne({ email }).select('+password');
+const login = async (phone, password) => {
+  // Find user by phone
+  const user = await User.findOne({ phone }).select('+password');
 
   if (!user) {
-    throw new ApiError('Invalid email or password', 401);
+    throw new ApiError('Invalid phone or password', 401);
   }
 
-  // Check password
-  const isMatch = await user.comparePassword(password);
-  if (!isMatch) {
-    throw new ApiError('Invalid email or password', 401);
+  // Check password if exists
+  if (user.password) {
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      throw new ApiError('Invalid phone or password', 401);
+    }
   }
 
   // Check if user is active
@@ -92,6 +224,7 @@ const updateProfile = async (userId, updateData) => {
   delete updateData.isActive;
   delete updateData.isApproved;
   delete updateData.password;
+  delete updateData.otp;
 
   const user = await User.findByIdAndUpdate(
     userId,
@@ -108,6 +241,8 @@ const updateProfile = async (userId, updateData) => {
 
 module.exports = {
   generateToken,
+  requestOTP,
+  verifyOTP,
   register,
   login,
   getProfile,

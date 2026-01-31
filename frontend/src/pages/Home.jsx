@@ -86,27 +86,40 @@ export default function Home() {
         </Card>
       </div>
 
-      {/* Demo Info */}
+      {/* How It Works */}
       <Card className="mt-12">
-        <h2 className="text-xl font-semibold mb-4">🔐 Demo Credentials</h2>
-        <div className="grid md:grid-cols-2 gap-4 text-sm">
+        <h2 className="text-xl font-semibold mb-4">📱 How It Works</h2>
+        <div className="grid md:grid-cols-3 gap-6 text-center">
           <div>
-            <p><strong>Admin:</strong> admin@ruzio.com / admin123</p>
-            <p><strong>Restaurant:</strong> pizza@ruzio.com / password123</p>
+            <div className="text-3xl mb-2">1️⃣</div>
+            <h4 className="font-semibold mb-1">Sign Up with Phone</h4>
+            <p className="text-sm text-gray-600">Quick registration with OTP verification</p>
           </div>
           <div>
-            <p><strong>Delivery:</strong> dave@ruzio.com / password123</p>
-            <p><strong>Customer:</strong> john@example.com / password123</p>
+            <div className="text-3xl mb-2">2️⃣</div>
+            <h4 className="font-semibold mb-1">Browse & Order</h4>
+            <p className="text-sm text-gray-600">Find restaurants, add items, place order</p>
+          </div>
+          <div>
+            <div className="text-3xl mb-2">3️⃣</div>
+            <h4 className="font-semibold mb-1">Track & Receive</h4>
+            <p className="text-sm text-gray-600">Track your order in real-time</p>
           </div>
         </div>
       </Card>
 
-      {/* Prototype Notice */}
-      <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
-        <p className="text-yellow-800">
-          ⚠️ This is a <strong>prototype</strong> for validation purposes. 
-          Features like real payment processing and map integration are mocked.
-        </p>
+      {/* Download App CTA */}
+      <div className="mt-8 p-6 bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg text-center text-white">
+        <h3 className="text-xl font-bold mb-2">📲 Download the RUZIO App</h3>
+        <p className="mb-4 opacity-90">Get a better experience on our mobile app</p>
+        <div className="flex justify-center gap-4">
+          <button className="bg-white text-primary-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100 transition">
+            🍎 App Store
+          </button>
+          <button className="bg-white text-primary-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100 transition">
+            🤖 Play Store
+          </button>
+        </div>
       </div>
     </Layout>
   );

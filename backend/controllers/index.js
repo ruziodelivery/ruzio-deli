@@ -8,5 +8,6 @@ module.exports = {
   adminController: require('./adminController'),
   restaurantController: require('./restaurantController'),
   orderController: require('./orderController'),
-  deliveryController: require('./deliveryController')
+  deliveryController: require('./deliveryController'),
+  notificationController: require('./notificationController')
 };

@@ -154,6 +154,53 @@ const approveRestaurant = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * @desc    Update restaurant commission
+ * @route   PUT /api/admin/restaurants/:id/commission
+ * @access  Admin
+ */
+const updateRestaurantCommission = asyncHandler(async (req, res) => {
+  const { commissionPercentage } = req.body;
+  const restaurant = await adminService.updateRestaurantCommission(req.params.id, commissionPercentage);
+
+  res.status(200).json({
+    success: true,
+    message: 'Restaurant commission updated successfully',
+    data: restaurant
+  });
+});
+
+/**
+ * @desc    Toggle menu item active status (admin override)
+ * @route   PUT /api/admin/menu-items/:id/toggle
+ * @access  Admin
+ */
+const toggleMenuItemActive = asyncHandler(async (req, res) => {
+  const { isActive } = req.body;
+  const menuItem = await adminService.toggleMenuItemActive(req.params.id, isActive);
+
+  res.status(200).json({
+    success: true,
+    message: `Menu item ${menuItem.isActive ? 'activated' : 'deactivated'} successfully`,
+    data: menuItem
+  });
+});
+
+/**
+ * @desc    Get all menu items
+ * @route   GET /api/admin/menu-items
+ * @access  Admin
+ */
+const getAllMenuItems = asyncHandler(async (req, res) => {
+  const items = await adminService.getAllMenuItems(req.query.restaurantId);
+
+  res.status(200).json({
+    success: true,
+    count: items.length,
+    data: items
+  });
+});
+
 module.exports = {
   getSettings,
   updateSettings,
@@ -164,5 +211,8 @@ module.exports = {
   getAllOrders,
   getEarnings,
   getAllRestaurants,
-  approveRestaurant
+  approveRestaurant,
+  updateRestaurantCommission,
+  toggleMenuItemActive,
+  getAllMenuItems
 };

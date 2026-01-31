@@ -3,7 +3,7 @@
  * Business logic for admin operations
  */
 
-const { User, PlatformSettings, Order, Restaurant } = require('../models');
+const { User, PlatformSettings, Order, Restaurant, MenuItem } = require('../models');
 const { ApiError } = require('../middleware/errorHandler');
 const { ROLES, ORDER_STATUS } = require('../config/constants');
 
@@ -27,6 +27,9 @@ const updateSettings = async (settingsData, adminId) => {
   // Update allowed fields
   if (settingsData.commissionPercentage !== undefined) {
     settings.commissionPercentage = settingsData.commissionPercentage;
+  }
+  if (settingsData.platformFeePercentage !== undefined) {
+    settings.platformFeePercentage = settingsData.platformFeePercentage;
   }
   if (settingsData.baseDeliveryCharge !== undefined) {
     settings.baseDeliveryCharge = settingsData.baseDeliveryCharge;
@@ -105,7 +108,7 @@ const toggleUserStatus = async (userId, isActive) => {
 };
 
 /**
- * Get all orders for admin view
+ * Get all orders for admin view with delivery info
  */
 const getAllOrders = async (filters = {}) => {
   const query = {};
@@ -115,9 +118,9 @@ const getAllOrders = async (filters = {}) => {
   }
 
   const orders = await Order.find(query)
-    .populate('customer', 'name email')
+    .populate('customer', 'name email phone')
     .populate('restaurant', 'name')
-    .populate('deliveryPartner', 'name')
+    .populate('deliveryPartner', 'name phone')
     .sort({ createdAt: -1 });
 
   return orders;
@@ -134,12 +137,14 @@ const getPlatformEarnings = async () => {
     totalOrders: deliveredOrders.length,
     totalRevenue: 0,
     totalCommission: 0,
+    totalPlatformFees: 0,
     totalDeliveryCharges: 0
   };
 
   deliveredOrders.forEach(order => {
     stats.totalRevenue += order.totalAmount;
     stats.totalCommission += order.adminCommission;
+    stats.totalPlatformFees += order.platformFee || 0;
     stats.totalDeliveryCharges += order.deliveryCharge;
   });
 
@@ -174,7 +179,7 @@ const getPlatformEarnings = async () => {
  */
 const getAllRestaurants = async () => {
   const restaurants = await Restaurant.find()
-    .populate('owner', 'name email')
+    .populate('owner', 'name email phone')
     .sort({ createdAt: -1 });
 
   return restaurants;
@@ -196,6 +201,54 @@ const approveRestaurant = async (restaurantId) => {
   return restaurant;
 };
 
+/**
+ * Update restaurant commission
+ */
+const updateRestaurantCommission = async (restaurantId, commissionPercentage) => {
+  const restaurant = await Restaurant.findById(restaurantId);
+  
+  if (!restaurant) {
+    throw new ApiError('Restaurant not found', 404);
+  }
+
+  restaurant.commissionPercentage = commissionPercentage;
+  await restaurant.save();
+
+  return restaurant;
+};
+
+/**
+ * Toggle menu item active status (admin override)
+ * @param {string} itemId - Menu item ID
+ * @param {boolean} isActive - Optional explicit active state (if not provided, toggles current state)
+ */
+const toggleMenuItemActive = async (itemId, isActive = null) => {
+  const menuItem = await MenuItem.findById(itemId);
+  
+  if (!menuItem) {
+    throw new ApiError('Menu item not found', 404);
+  }
+
+  // If isActive is explicitly provided, use it; otherwise toggle
+  menuItem.isActive = isActive !== null ? isActive : !menuItem.isActive;
+  await menuItem.save();
+
+  return menuItem;
+};
+
+/**
+ * Get all menu items for admin
+ */
+const getAllMenuItems = async (restaurantId = null) => {
+  const query = restaurantId ? { restaurant: restaurantId } : {};
+  
+  const items = await MenuItem.find(query)
+    .populate('restaurant', 'name')
+    .sort({ createdAt: -1 });
+
+  return items;
+};
+
 module.exports = {
   getSettings,
   updateSettings,
@@ -205,5 +258,8 @@ module.exports = {
   getAllOrders,
   getPlatformEarnings,
   getAllRestaurants,
-  approveRestaurant
+  approveRestaurant,
+  updateRestaurantCommission,
+  toggleMenuItemActive,
+  getAllMenuItems
 };

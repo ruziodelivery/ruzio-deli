@@ -46,18 +46,30 @@ const restaurantSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Commission percentage for this restaurant (admin configurable per restaurant)
+  commissionPercentage: {
+    type: Number,
+    default: null, // null means use platform default
+    min: [0, 'Commission cannot be negative'],
+    max: [100, 'Commission cannot exceed 100%']
+  },
   // Average preparation time in minutes
   avgPrepTime: {
     type: Number,
     default: 30,
     min: [5, 'Prep time must be at least 5 minutes']
   },
-  // Rating (for future use)
+  // Rating (average of all reviews)
   rating: {
     type: Number,
     default: 0,
     min: 0,
     max: 5
+  },
+  // Total number of ratings
+  ratingCount: {
+    type: Number,
+    default: 0
   },
   totalOrders: {
     type: Number,

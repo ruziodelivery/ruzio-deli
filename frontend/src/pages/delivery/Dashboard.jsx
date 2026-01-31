@@ -1,10 +1,11 @@
+
 /**
- * RUZIO - Delivery Partner Dashboard
+ * RUZIO - Delivery Partner Dashboard (Updated with INR)
  */
 
 import { useState, useEffect } from 'react';
 import { deliveryAPI } from '../../services/api';
-import { Layout, Card, Button, StatCard, Loading, ErrorMessage, OrderStatusBadge, EmptyState } from '../../components/ui';
+import { Layout, Card, Button, StatCard, Loading, ErrorMessage, OrderStatusBadge, EmptyState, formatCurrency } from '../../components/ui';
 import toast from 'react-hot-toast';
 
 export default function DeliveryDashboard() {
@@ -88,10 +89,15 @@ export default function DeliveryDashboard() {
               <p className="text-sm text-gray-600">
                 To: {activeDelivery.customer?.name} - {activeDelivery.deliveryAddress}
               </p>
-              <p className="text-sm text-gray-600">
-                Customer Phone: {activeDelivery.customer?.phone || 'N/A'}
-              </p>
-              <p className="font-bold mt-2">Delivery Charge: ${activeDelivery.deliveryCharge.toFixed(2)}</p>
+              <div className="mt-2 p-2 bg-blue-100 rounded">
+                <p className="text-sm font-medium text-blue-800">
+                  📞 Customer Phone: 
+                  <a href={`tel:${activeDelivery.customer?.phone}`} className="ml-1 underline">
+                    {activeDelivery.customer?.phone || 'N/A'}
+                  </a>
+                </p>
+              </div>
+              <p className="font-bold mt-2">Delivery Charge: {formatCurrency(activeDelivery.deliveryCharge)}</p>
             </div>
             <OrderStatusBadge status={activeDelivery.status} />
           </div>
@@ -164,9 +170,8 @@ export default function DeliveryDashboard() {
                   </div>
                   
                   <div className="mt-4 pt-4 border-t">
-                    <p className="text-sm text-gray-600">Distance: {order.distanceKm} km</p>
                     <p className="font-bold text-primary-600">
-                      Delivery Charge: ${order.deliveryCharge.toFixed(2)}
+                      Delivery Charge: {formatCurrency(order.deliveryCharge)}
                     </p>
                   </div>
 
@@ -206,7 +211,7 @@ export default function DeliveryDashboard() {
                     <div className="text-right">
                       <OrderStatusBadge status={order.status} />
                       <p className="font-bold text-green-600 mt-2">
-                        +${order.deliveryCharge.toFixed(2)}
+                        +{formatCurrency(order.deliveryCharge)}
                       </p>
                     </div>
                   </div>
@@ -224,7 +229,7 @@ export default function DeliveryDashboard() {
           <StatCard title="Pending Pickups" value={stats.pendingPickups} icon="⏳" />
           <StatCard 
             title="Total Earnings" 
-            value={`$${stats.totalDeliveryEarnings.toFixed(2)}`} 
+            value={formatCurrency(stats.totalDeliveryEarnings)} 
             icon="💰" 
           />
         </div>

@@ -28,7 +28,22 @@ module.exports = {
   // Default Platform Settings
   DEFAULT_SETTINGS: {
     commissionPercentage: 10,     // 10% commission
-    baseDeliveryCharge: 20,       // Base delivery fee
-    perKmRate: 5                  // Per km rate
+    platformFeePercentage: 2.4,   // 2.4% platform fee
+    baseDeliveryCharge: 30,       // Base delivery fee in INR
+    perKmRate: 8                  // Per km rate in INR
+  },
+
+  // Currency configuration
+  CURRENCY: {
+    symbol: '₹',
+    code: 'INR',
+    name: 'Indian Rupees'
+  },
+
+  // Fast2SMS configuration
+  FAST2SMS: {
+    apiUrl: 'https://www.fast2sms.com/dev/bulkV2',
+    otpLength: 6,
+    otpExpiry: 5 // minutes
   }
 };

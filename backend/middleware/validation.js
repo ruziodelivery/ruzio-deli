@@ -1,3 +1,4 @@
+
 /**
  * RUZIO - Validation Middleware
  * Input validation using express-validator
@@ -27,12 +28,16 @@ const registerValidation = [
     .trim()
     .notEmpty().withMessage('Name is required')
     .isLength({ max: 100 }).withMessage('Name cannot exceed 100 characters'),
-  body('email')
+  body('phone')
     .trim()
-    .notEmpty().withMessage('Email is required')
+    .notEmpty().withMessage('Phone number is required')
+    .matches(/^[6-9]\d{9}$/).withMessage('Please enter a valid 10-digit Indian mobile number'),
+  body('email')
+    .optional()
+    .trim()
     .isEmail().withMessage('Please enter a valid email'),
   body('password')
-    .notEmpty().withMessage('Password is required')
+    .optional()
     .isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
   body('role')
     .optional()
@@ -41,12 +46,12 @@ const registerValidation = [
 ];
 
 const loginValidation = [
-  body('email')
+  body('phone')
     .trim()
-    .notEmpty().withMessage('Email is required')
-    .isEmail().withMessage('Please enter a valid email'),
+    .notEmpty().withMessage('Phone number is required')
+    .matches(/^[6-9]\d{9}$/).withMessage('Please enter a valid 10-digit Indian mobile number'),
   body('password')
-    .notEmpty().withMessage('Password is required'),
+    .optional(),
   validate
 ];
 
@@ -128,6 +133,9 @@ const settingsValidation = [
   body('commissionPercentage')
     .optional()
     .isFloat({ min: 0, max: 100 }).withMessage('Commission must be between 0 and 100'),
+  body('platformFeePercentage')
+    .optional()
+    .isFloat({ min: 0, max: 100 }).withMessage('Platform fee must be between 0 and 100'),
   body('baseDeliveryCharge')
     .optional()
     .isFloat({ min: 0 }).withMessage('Base delivery charge must be positive'),

@@ -2,9 +2,92 @@
  * RUZIO - Shared UI Components
  */
 
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useNotifications } from '../context/NotificationContext';
+
+// Currency formatting helper
+export const formatCurrency = (amount) => {
+  return `₹${Number(amount).toFixed(2)}`;
+};
+
+// Notification Bell Component
+export function NotificationBell() {
+  const { unreadCount, notifications, markAllAsRead, markAsRead, fetchNotifications } = useNotifications();
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const handleBellClick = async () => {
+    if (!showDropdown) {
+      await fetchNotifications();
+    }
+    setShowDropdown(!showDropdown);
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={handleBellClick}
+        className="relative p-1 hover:bg-primary-700 rounded transition"
+      >
+        🔔
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {showDropdown && (
+        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+          <div className="flex items-center justify-between p-3 border-b">
+            <h3 className="font-semibold text-gray-800">Notifications</h3>
+            {unreadCount > 0 && (
+              <button
+                onClick={() => { markAllAsRead(); }}
+                className="text-xs text-primary-600 hover:underline"
+              >
+                Mark all read
+              </button>
+            )}
+          </div>
+          
+          {notifications.length === 0 ? (
+            <div className="p-4 text-center text-gray-500">
+              No notifications
+            </div>
+          ) : (
+            notifications.map(notification => (
+              <div
+                key={notification._id}
+                onClick={() => markAsRead(notification._id)}
+                className={`p-3 border-b cursor-pointer hover:bg-gray-50 ${
+                  !notification.isRead ? 'bg-primary-50' : ''
+                }`}
+              >
+                <div className="flex items-start space-x-2">
+                  <span className="text-lg">
+                    {notification.type === 'new_order' ? '🛒' : 
+                     notification.type === 'order_assigned' ? '🚴' : 
+                     notification.type === 'order_ready' ? '✅' : '📢'}
+                  </span>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm text-gray-800">{notification.title}</p>
+                    <p className="text-xs text-gray-600">{notification.message}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(notification.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Navigation Bar
 export function Navbar() {
@@ -23,6 +106,8 @@ export function Navbar() {
     }
   };
 
+  const showNotificationBell = isAuthenticated && (user?.role === 'restaurant' || user?.role === 'delivery');
+
   return (
     <nav className="bg-primary-600 text-white shadow-lg">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -31,8 +116,18 @@ export function Navbar() {
         </Link>
         
         <div className="flex items-center space-x-4">
+          {/* Download App Button */}
+          <a
+            href="#download"
+            className="hidden md:block bg-green-500 hover:bg-green-600 px-3 py-1 rounded text-sm font-medium transition"
+          >
+            📱 Download App
+          </a>
+
           {isAuthenticated ? (
             <>
+              {showNotificationBell && <NotificationBell />}
+              
               {user.role === 'customer' && (
                 <Link to="/cart" className="relative">
                   🛒
@@ -46,7 +141,7 @@ export function Navbar() {
               <span className="text-sm bg-primary-700 px-2 py-1 rounded">
                 {user.role.toUpperCase()}
               </span>
-              <span className="text-sm">{user.name}</span>
+              <span className="text-sm hidden md:inline">{user.name}</span>
               <button
                 onClick={logout}
                 className="bg-primary-800 px-3 py-1 rounded hover:bg-primary-900 transition"
@@ -68,14 +163,52 @@ export function Navbar() {
   );
 }
 
+// Bottom Navigation for Mobile (Customer)
+export function BottomNav() {
+  const { user, isAuthenticated } = useAuth();
+  const { getItemCount } = useCart();
+  const cartCount = getItemCount();
+
+  if (!isAuthenticated || user?.role !== 'customer') return null;
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg md:hidden z-40">
+      <div className="flex justify-around items-center py-2">
+        <Link to="/browse" className="flex flex-col items-center p-2 text-gray-600 hover:text-primary-600">
+          <span className="text-xl">🏠</span>
+          <span className="text-xs">Home</span>
+        </Link>
+        <Link to="/browse" className="flex flex-col items-center p-2 text-gray-600 hover:text-primary-600">
+          <span className="text-xl">🔍</span>
+          <span className="text-xs">Search</span>
+        </Link>
+        <Link to="/cart" className="flex flex-col items-center p-2 text-gray-600 hover:text-primary-600 relative">
+          <span className="text-xl">🛒</span>
+          {cartCount > 0 && (
+            <span className="absolute top-0 right-2 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+              {cartCount}
+            </span>
+          )}
+          <span className="text-xs">Cart</span>
+        </Link>
+        <Link to="/orders" className="flex flex-col items-center p-2 text-gray-600 hover:text-primary-600">
+          <span className="text-xl">👤</span>
+          <span className="text-xs">Profile</span>
+        </Link>
+      </div>
+    </nav>
+  );
+}
+
 // Page Layout
 export function Layout({ children }) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-16 md:pb-0">
       <Navbar />
       <main className="max-w-7xl mx-auto px-4 py-6">
         {children}
       </main>
+      <BottomNav />
     </div>
   );
 }
@@ -220,6 +353,96 @@ export function OrderStatusBadge({ status }) {
   return <Badge variant={config.variant}>{config.label}</Badge>;
 }
 
+// Vertical Order Status Tracker
+export function OrderStatusTracker({ order }) {
+  const statuses = [
+    { key: 'pending', label: 'Order Placed', icon: '📝', time: order.createdAt },
+    { key: 'accepted', label: 'Accepted by Restaurant', icon: '✅', time: order.acceptedAt },
+    { key: 'preparing', label: 'Preparing Your Food', icon: '👨‍🍳', time: order.preparingAt },
+    { key: 'ready', label: 'Ready for Pickup', icon: '📦', time: order.readyAt },
+    { key: 'assigned', label: 'Delivery Partner Assigned', icon: '🚴', time: order.assignedAt },
+    { key: 'picked_up', label: 'Out for Delivery', icon: '🛵', time: order.pickedUpAt },
+    { key: 'delivered', label: 'Delivered', icon: '🎉', time: order.deliveredAt }
+  ];
+
+  const statusOrder = ['pending', 'accepted', 'preparing', 'ready', 'assigned', 'picked_up', 'delivered'];
+  const currentIndex = statusOrder.indexOf(order.status);
+
+  return (
+    <div className="space-y-0">
+      {statuses.map((status, index) => {
+        const isCompleted = statusOrder.indexOf(status.key) <= currentIndex;
+        const isActive = status.key === order.status;
+        const isLast = index === statuses.length - 1;
+
+        return (
+          <div key={status.key} className="flex items-start">
+            {/* Timeline indicator */}
+            <div className="flex flex-col items-center mr-4">
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                  isActive ? 'bg-primary-600 text-white ring-4 ring-primary-200' :
+                  isCompleted ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'
+                }`}
+              >
+                {isCompleted && !isActive ? '✓' : status.icon}
+              </div>
+              {!isLast && (
+                <div
+                  className={`w-0.5 h-12 ${isCompleted ? 'bg-green-400' : 'bg-gray-200'}`}
+                />
+              )}
+            </div>
+
+            {/* Status content */}
+            <div className={`flex-1 pb-8 ${isLast ? 'pb-0' : ''}`}>
+              <p className={`font-medium ${isActive ? 'text-primary-600' : isCompleted ? 'text-green-600' : 'text-gray-400'}`}>
+                {status.label}
+              </p>
+              {status.time && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {new Date(status.time).toLocaleString('en-IN', {
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Star Rating Component
+export function StarRating({ rating, onRate, readonly = false, size = 'md' }) {
+  const stars = [1, 2, 3, 4, 5];
+  const sizeClasses = {
+    sm: 'text-lg',
+    md: 'text-2xl',
+    lg: 'text-3xl'
+  };
+
+  return (
+    <div className="flex items-center space-x-1">
+      {stars.map(star => (
+        <button
+          key={star}
+          type="button"
+          onClick={() => !readonly && onRate && onRate(star)}
+          disabled={readonly}
+          className={`${sizeClasses[size]} ${readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110'} transition-transform`}
+        >
+          {star <= rating ? '⭐' : '☆'}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // Stat Card
 export function StatCard({ title, value, icon }) {
   return (
@@ -259,5 +482,24 @@ export function Modal({ isOpen, onClose, title, children }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// Toggle Switch Component
+export function ToggleSwitch({ enabled, onChange, label }) {
+  return (
+    <label className="flex items-center cursor-pointer">
+      <div className="relative">
+        <input
+          type="checkbox"
+          className="sr-only"
+          checked={enabled}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        <div className={`w-10 h-6 rounded-full transition ${enabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+        <div className={`absolute left-1 top-1 w-4 h-4 rounded-full bg-white transition transform ${enabled ? 'translate-x-4' : ''}`}></div>
+      </div>
+      {label && <span className="ml-2 text-sm text-gray-700">{label}</span>}
+    </label>
   );
 }

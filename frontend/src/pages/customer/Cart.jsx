@@ -1,44 +1,28 @@
 /**
- * RUZIO - Cart Page
+ * RUZIO - Cart Page (Updated with INR, Platform Fee)
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
-import { orderAPI } from '../../services/api';
-import { Layout, Card, Button, Input, Loading, ErrorMessage, EmptyState } from '../../components/ui';
+import { orderAPI, settingsAPI } from '../../services/api';
+import { Layout, Card, Button, Input, Loading, ErrorMessage, EmptyState, formatCurrency } from '../../components/ui';
 import toast from 'react-hot-toast';
 
+const PLATFORM_FEE_PERCENTAGE = 2.4;
+
 export default function Cart() {
-  const { cart, updateQuantity, removeItem, setDistance, clearCart, getTotal } = useCart();
+  const { cart, updateQuantity, removeItem, clearCart, getTotal } = useCart();
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [customerNote, setCustomerNote] = useState('');
-  const [estimate, setEstimate] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleGetEstimate = async () => {
-    if (cart.items.length === 0) return;
-    
-    setLoading(true);
-    setError('');
-    try {
-      const res = await orderAPI.getEstimate({
-        restaurantId: cart.restaurantId,
-        items: cart.items.map(item => ({
-          menuItemId: item._id,
-          quantity: item.quantity
-        })),
-        distanceKm: cart.distanceKm
-      });
-      setEstimate(res.data.data);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to get estimate');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const itemsTotal = getTotal();
+  const deliveryFee = 30; // Fixed delivery fee in INR
+  const platformFee = Number((itemsTotal * PLATFORM_FEE_PERCENTAGE / 100).toFixed(2));
+  const grandTotal = itemsTotal + deliveryFee + platformFee;
 
   const handlePlaceOrder = async () => {
     if (!deliveryAddress.trim()) {
@@ -56,7 +40,6 @@ export default function Cart() {
           quantity: item.quantity
         })),
         deliveryAddress,
-        distanceKm: cart.distanceKm,
         customerNote
       };
 
@@ -103,9 +86,18 @@ export default function Cart() {
 
             {cart.items.map(item => (
               <div key={item._id} className="flex justify-between items-center py-3 border-b">
-                <div className="flex-1">
-                  <h3 className="font-medium">{item.name}</h3>
-                  <p className="text-primary-600 font-semibold">${item.price.toFixed(2)}</p>
+                <div className="flex items-center flex-1 gap-3">
+                  {item.image && (
+                    <img 
+                      src={item.image} 
+                      alt={item.name}
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                  )}
+                  <div>
+                    <h3 className="font-medium">{item.name}</h3>
+                    <p className="text-primary-600 font-semibold">{formatCurrency(item.price)}</p>
+                  </div>
                 </div>
                 
                 <div className="flex items-center space-x-3">
@@ -130,29 +122,11 @@ export default function Cart() {
                   </button>
                 </div>
                 
-                <p className="font-semibold ml-4 w-20 text-right">
-                  ${(item.price * item.quantity).toFixed(2)}
+                <p className="font-semibold ml-4 w-24 text-right">
+                  {formatCurrency(item.price * item.quantity)}
                 </p>
               </div>
             ))}
-
-            <div className="mt-4">
-              <label className="block text-sm font-medium mb-1">
-                Delivery Distance (km) - Mock value for prototype
-              </label>
-              <input
-                type="number"
-                step="0.5"
-                min="0.5"
-                max="20"
-                value={cart.distanceKm}
-                onChange={(e) => setDistance(parseFloat(e.target.value))}
-                className="w-32 px-3 py-2 border rounded"
-              />
-              <Button variant="secondary" onClick={handleGetEstimate} className="ml-4">
-                Get Estimate
-              </Button>
-            </div>
           </Card>
         </div>
 
@@ -166,29 +140,23 @@ export default function Cart() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span>Items Total</span>
-                <span>${getTotal().toFixed(2)}</span>
+                <span>{formatCurrency(itemsTotal)}</span>
               </div>
               
-              {estimate && (
-                <>
-                  <div className="flex justify-between text-gray-500">
-                    <span>Delivery ({cart.distanceKm} km)</span>
-                    <span>${estimate.deliveryCharge.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-400">
-                    <span className="ml-4">Base charge</span>
-                    <span>${estimate.breakdown.baseDeliveryCharge.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-400">
-                    <span className="ml-4">Distance charge</span>
-                    <span>${estimate.breakdown.distanceCharge.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                    <span>Total</span>
-                    <span>${estimate.totalAmount.toFixed(2)}</span>
-                  </div>
-                </>
-              )}
+              <div className="flex justify-between text-gray-500">
+                <span>Delivery Fee</span>
+                <span>{formatCurrency(deliveryFee)}</span>
+              </div>
+              
+              <div className="flex justify-between text-gray-500">
+                <span>Platform Fee ({PLATFORM_FEE_PERCENTAGE}%)</span>
+                <span>{formatCurrency(platformFee)}</span>
+              </div>
+              
+              <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                <span>Total</span>
+                <span>{formatCurrency(grandTotal)}</span>
+              </div>
             </div>
 
             <div className="mt-4 pt-4 border-t">
@@ -212,17 +180,11 @@ export default function Cart() {
 
             <Button
               onClick={handlePlaceOrder}
-              disabled={loading || !estimate}
+              disabled={loading}
               className="w-full mt-4"
             >
-              {loading ? 'Placing Order...' : 'Place Order'}
+              {loading ? 'Placing Order...' : `Pay ${formatCurrency(grandTotal)}`}
             </Button>
-
-            {!estimate && (
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                Click "Get Estimate" to see delivery charges
-              </p>
-            )}
           </Card>
         </div>
       </div>

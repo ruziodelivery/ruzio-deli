@@ -26,6 +26,11 @@ router.put('/users/:id/unblock', mongoIdValidation, adminController.unblockUser)
 // Restaurant management
 router.get('/restaurants', adminController.getAllRestaurants);
 router.put('/restaurants/:id/approve', mongoIdValidation, adminController.approveRestaurant);
+router.put('/restaurants/:id/commission', mongoIdValidation, adminController.updateRestaurantCommission);
+
+// Menu item management
+router.get('/menu-items', adminController.getAllMenuItems);
+router.put('/menu-items/:id/toggle', mongoIdValidation, adminController.toggleMenuItemActive);
 
 // Orders & earnings
 router.get('/orders', adminController.getAllOrders);

@@ -5,15 +5,15 @@
 
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://ruzio-backend.onrender.com/api';
+const API_URL = '/api';
 
+// Create axios instance
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
   }
 });
-
 
 // Request interceptor - add auth token
 api.interceptors.request.use(
@@ -42,6 +42,8 @@ api.interceptors.response.use(
 
 // ============ Auth API ============
 export const authAPI = {
+  requestOTP: (data) => api.post('/auth/request-otp', data),
+  verifyOTP: (data) => api.post('/auth/verify-otp', data),
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
   getProfile: () => api.get('/auth/profile'),
@@ -58,6 +60,9 @@ export const adminAPI = {
   unblockUser: (id) => api.put(`/admin/users/${id}/unblock`),
   getRestaurants: () => api.get('/admin/restaurants'),
   approveRestaurant: (id) => api.put(`/admin/restaurants/${id}/approve`),
+  updateRestaurantCommission: (id, commission) => api.put(`/admin/restaurants/${id}/commission`, { commissionPercentage: commission }),
+  getMenuItems: () => api.get('/admin/menu-items'),
+  toggleMenuItem: (id, isActive) => api.put(`/admin/menu-items/${id}/toggle`, { isActive }),
   getOrders: (params) => api.get('/admin/orders', { params }),
   getEarnings: () => api.get('/admin/earnings')
 };
@@ -71,7 +76,7 @@ export const restaurantAPI = {
   getMenu: (id) => api.get(`/restaurant/${id}/menu`),
   
   // Restaurant owner
-  create: (data) => api.post('/restaurant/create', data),  // Updated endpoint
+  create: (data) => api.post('/restaurant/create', data),
   getMyRestaurant: () => api.get('/restaurant/my-restaurant'),
   update: (id, data) => api.put(`/restaurant/${id}`, data),
   toggleStatus: (id) => api.put(`/restaurant/${id}/toggle-status`),
@@ -87,16 +92,17 @@ export const restaurantAPI = {
   acceptOrder: (orderId) => api.put(`/restaurant/orders/${orderId}/accept`),
   rejectOrder: (orderId, reason) => api.put(`/restaurant/orders/${orderId}/reject`, { reason }),
   updateOrderStatus: (orderId, status) => api.put(`/restaurant/orders/${orderId}/status`, { status }),
-  getStats: () => api.get('/restaurant/stats/dashboard')
+  getStats: () => api.get('/restaurant/stats/dashboard'),
+  getReviews: () => api.get('/restaurant/reviews')
 };
 
 // ============ Order API ============
 export const orderAPI = {
   place: (data) => api.post('/orders', data),
-  getEstimate: (data) => api.post('/orders/estimate', data),
   getMyOrders: () => api.get('/orders/my-orders'),
   getById: (id) => api.get(`/orders/${id}`),
-  cancel: (id) => api.put(`/orders/${id}/cancel`)
+  cancel: (id) => api.put(`/orders/${id}/cancel`),
+  submitRating: (id, data) => api.post(`/orders/${id}/rate`, data)
 };
 
 // ============ Delivery API ============
@@ -107,6 +113,17 @@ export const deliveryAPI = {
   updateStatus: (orderId, status) => api.put(`/delivery/status/${orderId}`, { status }),
   getHistory: () => api.get('/delivery/history'),
   getStats: () => api.get('/delivery/stats')
+};
+
+// ============ Notification API ============
+export const notificationAPI = {
+  getAll: (limit) => api.get('/notifications', { params: { limit } }),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  markAsRead: (id) => api.put(`/notifications/${id}/read`),
+  markAllAsRead: () => api.put('/notifications/read-all'),
+  markAllAsSeen: () => api.put('/notifications/seen'),
+  delete: (id) => api.delete(`/notifications/${id}`),
+  clearAll: () => api.delete('/notifications')
 };
 
 export default api;

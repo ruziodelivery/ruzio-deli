@@ -32,8 +32,13 @@ const menuItemSchema = new mongoose.Schema({
     trim: true,
     default: 'General'
   },
-  // Whether item is currently available
+  // Whether item is currently available (restaurant toggle)
   isAvailable: {
+    type: Boolean,
+    default: true
+  },
+  // Admin override: can deactivate items
+  isActive: {
     type: Boolean,
     default: true
   },
@@ -42,7 +47,7 @@ const menuItemSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  // Image URL (optional, for future use)
+  // Image URL for food item
   image: {
     type: String,
     trim: true
@@ -52,6 +57,6 @@ const menuItemSchema = new mongoose.Schema({
 });
 
 // Index for faster restaurant menu queries
-menuItemSchema.index({ restaurant: 1, isAvailable: 1 });
+menuItemSchema.index({ restaurant: 1, isAvailable: 1, isActive: 1 });
 
 module.exports = mongoose.model('MenuItem', menuItemSchema);

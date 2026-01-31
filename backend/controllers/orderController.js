@@ -70,17 +70,18 @@ const cancelOrder = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Get order estimate (preview)
- * @route   POST /api/orders/estimate
- * @access  Customer
+ * @desc    Rate and review an order
+ * @route   POST /api/orders/:id/rate
+ * @access  Customer (owner)
  */
-const getOrderEstimate = asyncHandler(async (req, res) => {
-  const { restaurantId, items, distanceKm } = req.body;
-  const estimate = await orderService.getOrderEstimate(restaurantId, items, distanceKm);
+const rateOrder = asyncHandler(async (req, res) => {
+  const { rating, review } = req.body;
+  const order = await orderService.rateOrder(req.params.id, req.user._id, rating, review);
 
   res.status(200).json({
     success: true,
-    data: estimate
+    message: 'Rating submitted successfully',
+    data: order
   });
 });
 
@@ -89,5 +90,5 @@ module.exports = {
   getOrder,
   getMyOrders,
   cancelOrder,
-  getOrderEstimate
+  rateOrder
 };

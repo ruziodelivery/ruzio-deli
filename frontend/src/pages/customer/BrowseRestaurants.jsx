@@ -1,12 +1,12 @@
 /**
- * RUZIO - Customer Browse Restaurants & Food Page
+ * RUZIO - Customer Browse Restaurants & Food Page (Updated with INR)
  */
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { restaurantAPI } from '../../services/api';
 import { useCart } from '../../context/CartContext';
-import { Layout, Card, Loading, ErrorMessage, Badge, EmptyState, Button, Input } from '../../components/ui';
+import { Layout, Card, Loading, ErrorMessage, Badge, EmptyState, Button, Input, formatCurrency } from '../../components/ui';
 import toast from 'react-hot-toast';
 
 export default function BrowseRestaurants() {
@@ -234,7 +234,7 @@ export default function BrowseRestaurants() {
                   
                   <div className="flex justify-between items-center mb-3">
                     <span className="text-xl font-bold text-primary-600">
-                      ${item.price}
+                      {formatCurrency(item.price)}
                     </span>
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                       {item.category || 'Food'}
@@ -268,4 +268,3 @@ export default function BrowseRestaurants() {
   );
 }
  
-

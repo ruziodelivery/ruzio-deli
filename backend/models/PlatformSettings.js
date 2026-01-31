@@ -7,13 +7,21 @@ const mongoose = require('mongoose');
 const { DEFAULT_SETTINGS } = require('../config/constants');
 
 const platformSettingsSchema = new mongoose.Schema({
-  // Commission percentage that platform takes from each order
+  // Default commission percentage that platform takes from each order
   commissionPercentage: {
     type: Number,
     required: true,
     default: DEFAULT_SETTINGS.commissionPercentage,
     min: [0, 'Commission cannot be negative'],
     max: [100, 'Commission cannot exceed 100%']
+  },
+  // Platform fee percentage (charged to customer)
+  platformFeePercentage: {
+    type: Number,
+    required: true,
+    default: DEFAULT_SETTINGS.platformFeePercentage,
+    min: [0, 'Platform fee cannot be negative'],
+    max: [100, 'Platform fee cannot exceed 100%']
   },
   // Base delivery charge (flat fee)
   baseDeliveryCharge: {
@@ -44,6 +52,7 @@ platformSettingsSchema.statics.getSettings = async function() {
   if (!settings) {
     settings = await this.create({
       commissionPercentage: DEFAULT_SETTINGS.commissionPercentage,
+      platformFeePercentage: DEFAULT_SETTINGS.platformFeePercentage,
       baseDeliveryCharge: DEFAULT_SETTINGS.baseDeliveryCharge,
       perKmRate: DEFAULT_SETTINGS.perKmRate
     });

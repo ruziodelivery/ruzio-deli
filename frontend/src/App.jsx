@@ -6,6 +6,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { BottomNav } from './components/ui';
 
 // Pages
 import Home from './pages/Home';
@@ -117,6 +118,9 @@ function App() {
         {/* Catch all - redirect to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      
+      {/* Bottom Navigation for mobile (customer only) */}
+      {isAuthenticated && user?.role === 'customer' && <BottomNav />}
     </>
   );
 }

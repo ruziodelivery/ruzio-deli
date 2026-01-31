@@ -31,6 +31,11 @@ const orderItemSchema = new mongoose.Schema({
   subtotal: {
     type: Number,
     required: true
+  },
+  // Store image for order history
+  image: {
+    type: String,
+    trim: true
   }
 }, { _id: false });
 
@@ -54,6 +59,11 @@ const orderSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     default: null
+  },
+  // Delivery partner details snapshot
+  deliveryPartnerDetails: {
+    name: String,
+    phone: String
   },
   // Order items array
   items: [orderItemSchema],
@@ -86,6 +96,12 @@ const orderSchema = new mongoose.Schema({
   deliveryCharge: {
     type: Number,
     required: true
+  },
+  // Platform fee (2.4% of items total)
+  platformFee: {
+    type: Number,
+    required: true,
+    default: 0
   },
   totalAmount: {
     type: Number,
@@ -125,7 +141,20 @@ const orderSchema = new mongoose.Schema({
   rejectionReason: {
     type: String,
     trim: true
-  }
+  },
+  
+  // Customer rating and review
+  rating: {
+    type: Number,
+    min: 1,
+    max: 5
+  },
+  review: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Review cannot exceed 500 characters']
+  },
+  reviewedAt: Date
 }, {
   timestamps: true
 });

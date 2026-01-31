@@ -1,10 +1,10 @@
 /**
- * RUZIO - Restaurant Dashboard
+ * RUZIO - Restaurant Dashboard (With Earnings Dashboard, Image Upload)
  */
 
 import { useState, useEffect } from 'react';
 import { restaurantAPI } from '../../services/api';
-import { Layout, Card, Button, Input, StatCard, Loading, ErrorMessage, Badge, Modal, OrderStatusBadge } from '../../components/ui';
+import { Layout, Card, Button, Input, StatCard, Loading, ErrorMessage, Badge, Modal, OrderStatusBadge, formatCurrency } from '../../components/ui';
 import toast from 'react-hot-toast';
 
 export default function RestaurantDashboard() {
@@ -13,15 +13,15 @@ export default function RestaurantDashboard() {
   const [menuItems, setMenuItems] = useState([]);
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState(null);
-  const [initialLoading, setInitialLoading] = useState(true); // For initial fetch only
-  const [loading, setLoading] = useState(false); // For tab data loading
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [menuForm, setMenuForm] = useState({
-    name: '', description: '', price: '', category: '', isVeg: false
+    name: '', description: '', price: '', category: '', isVeg: false, image: ''
   });
-  const [creating, setCreating] = useState(false); // For restaurant creation
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     fetchRestaurant();
@@ -50,7 +50,7 @@ export default function RestaurantDashboard() {
     if (!restaurant) return;
     setLoading(true);
     try {
-      if (activeTab === 'overview') {
+      if (activeTab === 'overview' || activeTab === 'earnings') {
         const res = await restaurantAPI.getStats();
         setStats(res.data.data);
       } else if (activeTab === 'menu') {
@@ -106,7 +106,7 @@ export default function RestaurantDashboard() {
       }
       setShowMenuModal(false);
       setEditingItem(null);
-      setMenuForm({ name: '', description: '', price: '', category: '', isVeg: false });
+      setMenuForm({ name: '', description: '', price: '', category: '', isVeg: false, image: '' });
       fetchTabData();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to save item');
@@ -171,7 +171,8 @@ export default function RestaurantDashboard() {
       description: item.description || '',
       price: item.price,
       category: item.category || '',
-      isVeg: item.isVeg
+      isVeg: item.isVeg,
+      image: item.image || ''
     });
     setShowMenuModal(true);
   };
@@ -206,9 +207,16 @@ export default function RestaurantDashboard() {
 
   const tabs = [
     { id: 'overview', label: '📊 Overview' },
+    { id: 'earnings', label: '💰 Earnings' },
     { id: 'menu', label: '🍽️ Menu' },
     { id: 'orders', label: '📦 Orders' }
   ];
+
+  // Calculate earnings breakdown
+  const grossEarnings = stats?.totalEarnings || 0;
+  const commissionPaid = stats?.totalCommissionPaid || 0;
+  const netEarnings = grossEarnings - commissionPaid;
+  const commissionRate = restaurant?.commissionPercentage || stats?.platformCommission || 10;
 
   return (
     <Layout>
@@ -233,12 +241,12 @@ export default function RestaurantDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-2 mb-6">
+      <div className="flex space-x-2 mb-6 overflow-x-auto">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded ${
+            className={`px-4 py-2 rounded whitespace-nowrap ${
               activeTab === tab.id
                 ? 'bg-primary-600 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -257,8 +265,59 @@ export default function RestaurantDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard title="Total Orders" value={stats.totalOrders} icon="📦" />
           <StatCard title="Pending Orders" value={stats.pendingOrders} icon="⏳" />
-          <StatCard title="Total Earnings" value={`$${stats.totalEarnings.toFixed(2)}`} icon="💰" />
-          <StatCard title="Commission Paid" value={`$${stats.totalCommissionPaid.toFixed(2)}`} icon="📊" />
+          <StatCard title="Net Earnings" value={formatCurrency(netEarnings)} icon="💰" />
+          <StatCard title="Avg Rating" value={restaurant?.rating?.toFixed(1) || 'N/A'} icon="⭐" />
+        </div>
+      )}
+
+      {/* Earnings Tab */}
+      {!loading && activeTab === 'earnings' && stats && (
+        <div>
+          <div className="grid md:grid-cols-3 gap-6 mb-6">
+            <Card className="bg-green-50">
+              <div className="text-center">
+                <p className="text-sm text-gray-600">Gross Earnings</p>
+                <p className="text-3xl font-bold text-green-600">{formatCurrency(grossEarnings)}</p>
+                <p className="text-xs text-gray-500 mt-1">Total from all orders</p>
+              </div>
+            </Card>
+            <Card className="bg-red-50">
+              <div className="text-center">
+                <p className="text-sm text-gray-600">Commission Deducted</p>
+                <p className="text-3xl font-bold text-red-600">- {formatCurrency(commissionPaid)}</p>
+                <p className="text-xs text-gray-500 mt-1">Platform fee @ {commissionRate}%</p>
+              </div>
+            </Card>
+            <Card className="bg-blue-50">
+              <div className="text-center">
+                <p className="text-sm text-gray-600">Net Earnings</p>
+                <p className="text-3xl font-bold text-blue-600">{formatCurrency(netEarnings)}</p>
+                <p className="text-xs text-gray-500 mt-1">Amount to receive</p>
+              </div>
+            </Card>
+          </div>
+
+          <Card>
+            <h3 className="font-semibold mb-4">Earnings Breakdown</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between py-2 border-b">
+                <span>Total Orders Completed</span>
+                <span className="font-medium">{stats.totalOrders}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span>Gross Sales</span>
+                <span className="font-medium text-green-600">{formatCurrency(grossEarnings)}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span>Platform Commission ({commissionRate}%)</span>
+                <span className="font-medium text-red-600">- {formatCurrency(commissionPaid)}</span>
+              </div>
+              <div className="flex justify-between py-2 text-lg font-bold">
+                <span>Net Amount Payable</span>
+                <span className="text-blue-600">{formatCurrency(netEarnings)}</span>
+              </div>
+            </div>
+          </Card>
         </div>
       )}
 
@@ -269,7 +328,7 @@ export default function RestaurantDashboard() {
             <h2 className="text-xl font-semibold">Menu Items</h2>
             <Button onClick={() => {
               setEditingItem(null);
-              setMenuForm({ name: '', description: '', price: '', category: '', isVeg: false });
+              setMenuForm({ name: '', description: '', price: '', category: '', isVeg: false, image: '' });
               setShowMenuModal(true);
             }}>
               + Add Item
@@ -279,6 +338,13 @@ export default function RestaurantDashboard() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {menuItems.map(item => (
               <Card key={item._id}>
+                {item.image && (
+                  <img 
+                    src={item.image} 
+                    alt={item.name}
+                    className="w-full h-32 object-cover rounded-lg mb-3"
+                  />
+                )}
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="font-semibold">
@@ -286,11 +352,16 @@ export default function RestaurantDashboard() {
                     </h3>
                     <p className="text-sm text-gray-500">{item.category}</p>
                     <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-                    <p className="text-lg font-bold text-primary-600 mt-2">${item.price.toFixed(2)}</p>
+                    <p className="text-lg font-bold text-primary-600 mt-2">{formatCurrency(item.price)}</p>
                   </div>
-                  <Badge variant={item.isAvailable ? 'success' : 'danger'}>
-                    {item.isAvailable ? 'Available' : 'Unavailable'}
-                  </Badge>
+                  <div className="flex flex-col gap-1">
+                    <Badge variant={item.isAvailable ? 'success' : 'danger'}>
+                      {item.isAvailable ? 'Available' : 'Unavailable'}
+                    </Badge>
+                    {item.isActive === false && (
+                      <Badge variant="warning">Disabled by Admin</Badge>
+                    )}
+                  </div>
                 </div>
                 <div className="flex space-x-2 mt-4">
                   <Button variant="secondary" onClick={() => openEditModal(item)}>Edit</Button>
@@ -319,6 +390,7 @@ export default function RestaurantDashboard() {
                   <div>
                     <h3 className="font-semibold">Order #{order.orderNumber}</h3>
                     <p className="text-sm text-gray-500">Customer: {order.customer?.name}</p>
+                    <p className="text-sm text-gray-500">Phone: {order.customer?.phone || 'N/A'}</p>
                     <p className="text-sm text-gray-500">Address: {order.deliveryAddress}</p>
                   </div>
                   <OrderStatusBadge status={order.status} />
@@ -327,12 +399,15 @@ export default function RestaurantDashboard() {
                 <div className="mt-4 border-t pt-4">
                   <p className="text-sm font-medium mb-2">Items:</p>
                   {order.items.map((item, idx) => (
-                    <p key={idx} className="text-sm text-gray-600">
-                      {item.quantity}x {item.name} - ${item.subtotal.toFixed(2)}
-                    </p>
+                    <div key={idx} className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                      {item.image && (
+                        <img src={item.image} alt={item.name} className="w-8 h-8 object-cover rounded" />
+                      )}
+                      <span>{item.quantity}x {item.name} - {formatCurrency(item.subtotal)}</span>
+                    </div>
                   ))}
-                  <p className="font-bold mt-2">Total: ${order.totalAmount.toFixed(2)}</p>
-                  <p className="text-sm text-gray-500">Your Earning: ${order.restaurantEarning.toFixed(2)}</p>
+                  <p className="font-bold mt-2">Total: {formatCurrency(order.totalAmount)}</p>
+                  <p className="text-sm text-green-600">Your Earning: {formatCurrency(order.restaurantEarning)}</p>
                 </div>
 
                 <div className="flex space-x-2 mt-4">
@@ -378,9 +453,9 @@ export default function RestaurantDashboard() {
             onChange={(e) => setMenuForm({ ...menuForm, description: e.target.value })}
           />
           <Input
-            label="Price"
+            label="Price (₹)"
             type="number"
-            step="0.01"
+            step="1"
             value={menuForm.price}
             onChange={(e) => setMenuForm({ ...menuForm, price: e.target.value })}
             required
@@ -391,6 +466,22 @@ export default function RestaurantDashboard() {
             onChange={(e) => setMenuForm({ ...menuForm, category: e.target.value })}
             placeholder="e.g., Pizza, Drinks, Desserts"
           />
+          <Input
+            label="Image URL"
+            value={menuForm.image}
+            onChange={(e) => setMenuForm({ ...menuForm, image: e.target.value })}
+            placeholder="https://example.com/image.jpg"
+          />
+          {menuForm.image && (
+            <div className="mb-4">
+              <img 
+                src={menuForm.image} 
+                alt="Preview" 
+                className="w-full h-32 object-cover rounded-lg"
+                onError={(e) => e.target.style.display = 'none'}
+              />
+            </div>
+          )}
           <label className="flex items-center space-x-2 mb-4">
             <input
               type="checkbox"

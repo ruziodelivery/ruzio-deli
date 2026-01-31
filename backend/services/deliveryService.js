@@ -3,7 +3,7 @@
  * Business logic for delivery partner operations
  */
 
-const { Order, User } = require('../models');
+const { Order, User, Notification } = require('../models');
 const { ApiError } = require('../middleware/errorHandler');
 const { ORDER_STATUS, ROLES } = require('../config/constants');
 
@@ -58,7 +58,11 @@ const acceptDelivery = async (orderId, deliveryPartnerId) => {
     {
       deliveryPartner: deliveryPartnerId,
       status: ORDER_STATUS.ASSIGNED,
-      assignedAt: new Date()
+      assignedAt: new Date(),
+      deliveryPartnerDetails: {
+        name: deliveryPartner.name,
+        phone: deliveryPartner.phone
+      }
     },
     { new: true }
   )
@@ -68,6 +72,15 @@ const acceptDelivery = async (orderId, deliveryPartnerId) => {
   if (!order) {
     throw new ApiError('Order not available or already assigned', 404);
   }
+
+  // Create notification for delivery partner
+  await Notification.createNotification(
+    deliveryPartnerId,
+    'order_assigned',
+    'New Delivery Assigned!',
+    `Order #${order.orderNumber} - Pickup from ${order.restaurant.name}`,
+    order._id
+  );
 
   return order;
 };

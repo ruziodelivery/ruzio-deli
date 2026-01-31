@@ -8,5 +8,6 @@ module.exports = {
   adminService: require('./adminService'),
   restaurantService: require('./restaurantService'),
   orderService: require('./orderService'),
-  deliveryService: require('./deliveryService')
+  deliveryService: require('./deliveryService'),
+  notificationService: require('./notificationService')
 };
