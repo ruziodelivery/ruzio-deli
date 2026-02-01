@@ -15,6 +15,7 @@ const {
   restaurantRoutes,
   orderRoutes,
   deliveryRoutes,
+  otpRoutes,
   notificationRoutes
 } = require('./routes');
 
@@ -30,6 +31,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+app.use("/api/otp", otpRoutes);
 app.use(express.urlencoded({ extended: true }));
 
 // API Routes
