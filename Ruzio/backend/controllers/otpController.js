@@ -1,4 +1,7 @@
 const OTP = require("../models/otp");
+const User = require("../models/User");
+const jwt = require("jsonwebtoken");
+
 
 exports.sendOtp = async (req, res) => {
   try {
@@ -61,10 +64,36 @@ exports.verifyOtp = async (req, res) => {
     // OTP is valid → remove it
     await OTP.deleteMany({ phone });
 
-    res.json({
-      success: true,
-      message: "OTP verified successfully",
-    });
+    // Find user by phone
+let user = await User.findOne({ phone });
+
+if (!user) {
+  // New user → auto register
+  user = await User.create({
+    phone,
+    name: "User",
+    otp: { verified: true },
+  });
+} else {
+  // Existing user → mark verified
+  user.otp.verified = true;
+  await user.save();
+}
+
+// Create JWT
+const token = jwt.sign(
+  { id: user._id, role: user.role },
+  process.env.JWT_SECRET,
+  { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
+);
+
+res.json({
+  success: true,
+  message: "OTP verified & logged in",
+  token,
+  user,
+});
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "OTP verification failed" });
