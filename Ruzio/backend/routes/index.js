@@ -9,6 +9,5 @@ module.exports = {
   restaurantRoutes: require('./restaurantRoutes'),
   orderRoutes: require('./orderRoutes'),
   deliveryRoutes: require('./deliveryRoutes'),
-  otpRoutes: require('./otpRoutes'),
   notificationRoutes: require('./notificationRoutes')
 };
