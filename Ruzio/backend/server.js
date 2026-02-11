@@ -23,10 +23,23 @@ const app = express();
 
 // Connect to MongoDB
 connectDB();
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://www.ruzio.in',
+  'https://ruzio-deli.onrender.com'
+];
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // allow Postman
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
