@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const { User } = require('../models');
 const { ApiError } = require('../middleware/errorHandler');
-const { ROLES, FAST2SMS } = require('../config/constants');
+const { ROLES} = require('../config/constants');
 
 /**
  * Generate JWT token
@@ -30,28 +30,27 @@ const generateOTP = () => {
  */
 const sendOTP = async (phone, otp) => {
   try {
-    const response = await axios.post(FAST2SMS.apiUrl, {
-      route: 'otp',
-      variables_values: otp,
-      numbers: phone
-    }, {
-      headers: {
-        'authorization': process.env.FAST2SMS_API_KEY,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    return response.data.return === true;
+    const response = await axios.get(
+      `https://2factor.in/API/V1/${process.env.TWO_FACTOR_API_KEY}/SMS/${phone}/${otp}`
+    );
+
+    if (response.data.Status !== "Success") {
+      throw new Error("2Factor OTP failed");
+    }
+
+    return true;
   } catch (error) {
-    console.error('Fast2SMS Error:', error.response?.data || error.message);
-    // In development, we'll allow OTP to be sent anyway for testing
-    if (process.env.NODE_ENV === 'development') {
+    console.error("2Factor Error:", error.response?.data || error.message);
+
+    if (process.env.NODE_ENV === "development") {
       console.log(`[DEV] OTP for ${phone}: ${otp}`);
       return true;
     }
-    throw new ApiError('Failed to send OTP. Please try again.', 500);
+
+    throw new ApiError("Failed to send OTP. Please try again.", 500);
   }
 };
+
 
 /**
  * Request OTP for login/signup
@@ -66,7 +65,7 @@ const requestOTP = async (phone, name = null, role = ROLES.CUSTOMER) => {
   let user = await User.findOne({ phone });
   
   const otp = generateOTP();
-  const otpExpiry = new Date(Date.now() + FAST2SMS.otpExpiry * 60 * 1000);
+  const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
 
   if (user) {
     // Existing user - just update OTP
