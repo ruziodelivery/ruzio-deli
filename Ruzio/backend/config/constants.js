@@ -38,12 +38,5 @@ module.exports = {
     symbol: '₹',
     code: 'INR',
     name: 'Indian Rupees'
-  },
-
-  // Fast2SMS configuration
-  FAST2SMS: {
-    apiUrl: 'https://www.fast2sms.com/dev/bulkV2',
-    otpLength: 6,
-    otpExpiry: 5 // minutes
   }
 };
