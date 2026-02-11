@@ -36,19 +36,14 @@ const userSchema = new mongoose.Schema({
   },
   // OTP for phone verification
   otp: {
-    code: {
-      type: String,
-      select: false
-    },
-    expiresAt: {
-      type: Date,
-      select: false
-    },
-    verified: {
-      type: Boolean,
-      default: false
-    }
+  sessionId: {
+    type: String
   },
+  verified: {
+    type: Boolean,
+    default: false
+  }
+},
   role: {
     type: String,
     enum: Object.values(ROLES),

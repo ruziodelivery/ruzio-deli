@@ -56,88 +56,76 @@ const sendOTP = async (phone, otp) => {
  * Request OTP for login/signup
  */
 const requestOTP = async (phone, name = null, role = ROLES.CUSTOMER) => {
-  // Validate phone number format (10 digit Indian mobile)
   if (!/^[6-9]\d{9}$/.test(phone)) {
-    throw new ApiError('Please enter a valid 10-digit Indian mobile number', 400);
+    throw new ApiError('Invalid Indian mobile number', 400);
   }
 
-  // Check if user exists
   let user = await User.findOne({ phone });
-  
-  const otp = generateOTP();
-  const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
 
-  if (user) {
-    // Existing user - just update OTP
-    user.otp = {
-      code: otp,
-      expiresAt: otpExpiry,
-      verified: false
-    };
-    await user.save();
-  } else {
-    // New user - create with pending status
-    if (!name) {
-      throw new ApiError('Name is required for new registration', 400);
-    }
+  if (!user && !name) {
+    throw new ApiError('Name is required for new registration', 400);
+  }
+
+  // Call 2Factor AUTOGEN
+  const response = await axios.get(
+    `https://2factor.in/API/V1/${process.env.TWO_FACTOR_API_KEY}/SMS/${phone}/AUTOGEN`
+  );
+
+  if (response.data.Status !== "Success") {
+    console.error("2Factor Error:", response.data);
+    throw new ApiError("Failed to send OTP", 500);
+  }
+
+  const sessionId = response.data.Details;
+
+  if (!user) {
     user = await User.create({
       name,
       phone,
       role,
       otp: {
-        code: otp,
-        expiresAt: otpExpiry,
+        sessionId,
         verified: false
       }
     });
+  } else {
+    user.otp = {
+      sessionId,
+      verified: false
+    };
+    await user.save();
   }
 
-  // Send OTP
-  await sendOTP(phone, otp);
-
   return {
-    message: 'OTP sent successfully',
-    isNewUser: !user.otp?.verified,
+    message: "OTP sent successfully",
     phone
   };
 };
-
 /**
  * Verify OTP and login
  */
 const verifyOTP = async (phone, otp) => {
-  const user = await User.findOne({ phone }).select('+otp.code +otp.expiresAt');
+  const user = await User.findOne({ phone });
 
-  if (!user) {
-    throw new ApiError('User not found', 404);
+  if (!user || !user.otp?.sessionId) {
+    throw new ApiError("Please request OTP first", 400);
   }
 
-  if (!user.otp?.code) {
-    throw new ApiError('Please request a new OTP', 400);
+  const response = await axios.get(
+    `https://2factor.in/API/V1/${process.env.TWO_FACTOR_API_KEY}/SMS/VERIFY/${user.otp.sessionId}/${otp}`
+  );
+
+  if (response.data.Status !== "Success") {
+    throw new ApiError("Invalid OTP", 400);
   }
 
-  if (new Date() > user.otp.expiresAt) {
-    throw new ApiError('OTP has expired. Please request a new one.', 400);
-  }
-
-  if (user.otp.code !== otp) {
-    throw new ApiError('Invalid OTP', 400);
-  }
-
-  // Check if user is active
-  if (!user.isActive) {
-    throw new ApiError('Your account has been deactivated', 401);
-  }
-
-  // Mark OTP as verified and clear it
   user.otp = {
-    code: null,
-    expiresAt: null,
+    sessionId: null,
     verified: true
   };
+
   await user.save();
 
-  // Generate token
   const token = generateToken(user._id);
 
   return {
@@ -145,6 +133,7 @@ const verifyOTP = async (phone, otp) => {
     token
   };
 };
+
 
 /**
  * Register a new user (legacy - email/password)
