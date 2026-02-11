@@ -9,7 +9,7 @@ const API_URL = '/api';
 
 // Create axios instance
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: "https://ruzio-backend.onrender.com/api",
   headers: {
     'Content-Type': 'application/json'
   }
